@@ -9,6 +9,8 @@ soundmenulib_LTLIBRARIES = libsoundmenu.la
 libsoundmenu_la_SOURCES = \
     common-defs.h \
 	indicator-sound.c \
+	indicator-status-image.c \
+	indicator-status-image.h \
 	dbus-shared-names.h \
     sound-service-client.h \
     sound-service-marshal.c \

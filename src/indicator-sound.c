@@ -35,7 +35,7 @@ with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <libindicator/indicator-object.h>
 #include <libindicator/indicator-service-manager.h>
 
-
+#include "indicator-status-image.h"
 #include "dbus-shared-names.h"
 #include "sound-service-client.h"
 #include "common-defs.h"
@@ -204,7 +204,10 @@ connection_changed (IndicatorServiceManager * sm, gboolean connected, gpointer u
 
 	return;
 }
-
+// Dbus outward methods
+/**
+fetch_volume_percent_from_dbus:
+**/
 static void fetch_volume_percent_from_dbus()
 {
     GError * error = NULL;
@@ -223,6 +226,9 @@ static void fetch_volume_percent_from_dbus()
     g_debug("at the indicator start up and the volume percent returned from dbus method is %f", initial_volume_percent);
 }
 
+/**
+fetch_mute_value_from_dbus:
+**/
 static void fetch_mute_value_from_dbus()
 {
     GError * error = NULL;
@@ -242,11 +248,19 @@ static void fetch_mute_value_from_dbus()
     g_debug("at the indicator start up and the MUTE returned from dbus method is %i", initial_mute);
 }
 
+
+//DBus inward signals
+/**
+catch_signal_input_while_muted:
+**/
 static void catch_signal_sink_input_while_muted(DBusGProxy * proxy, gboolean block_value, gpointer userdata)
 {
     g_debug("signal caught - sink input while muted with value %i", block_value);
 }
 
+/**
+catch_signal_sink_volume_update:
+**/
 static void catch_signal_sink_volume_update(DBusGProxy *proxy, gdouble volume_percent, gpointer userdata)
 {
     GtkWidget *slider = ido_scale_menu_item_get_scale((IdoScaleMenuItem*)volume_slider);
@@ -259,6 +273,9 @@ static void catch_signal_sink_volume_update(DBusGProxy *proxy, gdouble volume_pe
     determine_state_from_volume(volume_percent);
 }
 
+/**
+catch_signal_sink_mute_update:
+**/
 static void catch_signal_sink_mute_update(DBusGProxy *proxy, gboolean mute_value, gpointer userdata)
 {
     //We can be sure the service won't send a mute signal unless it has changed !
@@ -304,10 +321,37 @@ get_icon (IndicatorObject * io)
 {
     gchar* current_name = g_hash_table_lookup(volume_states, GINT_TO_POINTER(current_state));
     g_debug("At start-up attempting to set the image to %s", current_name);
-	speaker_image = GTK_IMAGE(gtk_image_new_from_icon_name(current_name, GTK_ICON_SIZE_MENU));
+
+    IndicatorStatusImage *status_image = indicator_status_image_new(current_name);
+    g_debug("have a status image");
+
+	speaker_image = GTK_IMAGE(status_image);
+
+    //GTK_IMAGE(gtk_image_new_from_icon_name(current_name, GTK_ICON_SIZE_MENU));
+    //register Key-press listening on the menu widget as the slider does not allow this.
+    //g_signal_connect(speaker_image, "scroll-event", G_CALLBACK(scroll_event_title_cb), NULL);         
+    g_debug("have a speaker image");
 	gtk_widget_show(GTK_WIDGET(speaker_image));
+
 	return speaker_image;
 }
+
+/* Indicator based function to get the menu for the whole
+   applet.  This starts up asking for the parts of the menu
+   from the various services. */
+static GtkMenu *
+get_menu (IndicatorObject * io)
+{
+    DbusmenuGtkMenu *menu = dbusmenu_gtkmenu_new(INDICATOR_SOUND_DBUS_NAME, INDICATOR_SOUND_DBUS_OBJECT);    
+	DbusmenuGtkClient *client = dbusmenu_gtkmenu_get_client(menu);	
+    dbusmenu_client_add_type_handler(DBUSMENU_CLIENT(client), DBUSMENU_SLIDER_MENUITEM_TYPE, new_slider_item);
+
+    // register Key-press listening on the menu widget as the slider does not allow this.
+    g_signal_connect(menu, "key-press-event", G_CALLBACK(key_press_cb), NULL);         
+
+    return GTK_MENU(menu);
+}
+
 
 static void update_state(const gint state)
 {
@@ -343,22 +387,6 @@ static void determine_state_from_volume(gdouble volume_percent)
     update_state(state);   
 }
  
-
-/* Indicator based function to get the menu for the whole
-   applet.  This starts up asking for the parts of the menu
-   from the various services. */
-static GtkMenu *
-get_menu (IndicatorObject * io)
-{
-    DbusmenuGtkMenu *menu = dbusmenu_gtkmenu_new(INDICATOR_SOUND_DBUS_NAME, INDICATOR_SOUND_DBUS_OBJECT);    
-	DbusmenuGtkClient *client = dbusmenu_gtkmenu_get_client(menu);	
-    dbusmenu_client_add_type_handler(DBUSMENU_CLIENT(client), DBUSMENU_SLIDER_MENUITEM_TYPE, new_slider_item);
-
-    // register Key-press listening on the menu widget as the slider does not allow this.
-    g_signal_connect(menu, "key-press-event", G_CALLBACK(key_press_cb), NULL);         
-
-    return GTK_MENU(menu);
-}
 
 /**
 new_slider_item:
@@ -433,6 +461,12 @@ key_press_cb:
 static gboolean key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 {
     gboolean digested = FALSE;
+
+    GtkWidget *active_item = gtk_menu_get_active((GtkMenu*)widget);
+    GtkMenuItem* item = (GtkMenuItem*)active_item;
+
+    g_debug("And the ACTIVE item in question has a label of : %s", gtk_menu_item_get_label(item));
+
 
     GtkWidget* slider = ido_scale_menu_item_get_scale((IdoScaleMenuItem*)volume_slider);
     GtkRange* range = (GtkRange*)slider;       

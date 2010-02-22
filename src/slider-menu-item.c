@@ -58,6 +58,7 @@ static void slider_menu_item_class_init (SliderMenuItemClass *klass)
 	return;
 }
 
+
 static void slider_menu_item_init (SliderMenuItem *self)
 {
 	g_debug("Building new Slider Menu Item");

@@ -88,7 +88,6 @@ static void destroy_sink_info(void *value)
     sink_info *sink = (sink_info*)value;
     g_free(sink->name);
     g_free(sink->description);        
-    g_free(sink->icon_name);  
     g_free(sink);  
 }
 
@@ -260,7 +259,6 @@ static void pulse_sink_info_callback(pa_context *c, const pa_sink_info *sink, in
         value->index = value->device_index = sink->index;
         value->name = g_strdup(sink->name);
         value->description = g_strdup(sink->description);
-        value->icon_name = g_strdup(pa_proplist_gets(sink->proplist, PA_PROP_DEVICE_ICON_NAME));
         value->active_port = (sink->active_port != NULL);
         value->mute = !!sink->mute;
         value->volume = sink->volume;
@@ -287,6 +285,7 @@ static void pulse_default_sink_info_callback(pa_context *c, const pa_sink_info *
         // Only update sink-list if the index is not in our already fetched list.
         if(position < 0)
         {
+            g_debug("Default sink has just changed to something we don't have in our hash ! fetch it now!");
             pa_operation_unref(pa_context_get_sink_info_list(c, pulse_sink_info_callback, NULL)); 
         }
         else
@@ -331,7 +330,6 @@ static void update_sink_info(pa_context *c, const pa_sink_info *info, int eol, v
         sink_info *s = g_hash_table_lookup(sink_hash, GINT_TO_POINTER(info->index));
         s->name = g_strdup(info->name);
         s->description = g_strdup(info->description);
-        s->icon_name = g_strdup(pa_proplist_gets(info->proplist, PA_PROP_DEVICE_ICON_NAME));
         s->active_port = (info->active_port != NULL);
         gboolean mute_changed = s->mute != !!info->mute;
         s->mute = !!info->mute;
@@ -366,11 +364,20 @@ static void update_sink_info(pa_context *c, const pa_sink_info *info, int eol, v
     }
     else
     {
-        // TODO ADD new sink - part of big refactor
         g_debug("attempting to add new sink with name %s", info->name);
-        //sink_info *s;
-        //s = g_new0(sink_info, 1);                
-        //update the sinks hash with new sink.
+
+        sink_info *value;
+        value = g_new0(sink_info, 1);
+        value->index = value->device_index = info->index;
+        value->name = g_strdup(info->name);
+        value->description = g_strdup(info->description);
+        value->active_port = (info->active_port != NULL);
+        value->mute = !!info->mute;
+        value->volume = info->volume;
+        value->base_volume = info->base_volume;
+        value->channel_map = info->channel_map;
+        g_hash_table_insert(sink_hash, GINT_TO_POINTER(info->index), value);
+        g_debug("After adding an item to our hash");
     }    
 }
 

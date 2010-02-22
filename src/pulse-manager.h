@@ -30,7 +30,7 @@ with this program.  If not, see <http://www.gnu.org/licenses/>.
 typedef struct {
     gchar* name;
     gchar* description;
-    gchar* icon_name;
+//    gchar* icon_name;
     gint index;
     gint device_index;
     pa_cvolume volume;
