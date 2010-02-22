@@ -27,17 +27,16 @@ typedef struct _IndicatorStatusImagePrivate IndicatorStatusImagePrivate;
 
 struct _IndicatorStatusImagePrivate
 {
-    // GDK stuff for window
+    GdkWindow* event_window;
 };
 
 #define INDICATOR_STATUS_IMAGE_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), INDICATOR_STATUS_IMAGE_TYPE, IndicatorStatusImagePrivate))
-
 
 /* Prototypes */
 static void indicator_status_image_class_init (IndicatorStatusImageClass *klass);
 static void indicator_status_image_init       (IndicatorStatusImage *self);
 static void indicator_status_image_dispose    (GObject *object);
-static void indicator_status_image_finalize   (GObject *object);
+static void indicator_status_image_finalize   (GObject *object); 
 
 G_DEFINE_TYPE (IndicatorStatusImage, indicator_status_image, GTK_TYPE_IMAGE);
 
@@ -60,17 +59,33 @@ static void indicator_status_image_class_init (IndicatorStatusImageClass *klass)
 static void indicator_status_image_init (IndicatorStatusImage *self)
 {
 	g_debug("Building new Indicator Status Image");
+    IndicatorStatusImagePrivate *priv = INDICATOR_STATUS_IMAGE_GET_PRIVATE(self);    
+    GdkWindowAttr attr;
+    attr.event_mask = GDK_SCROLL_MASK;
+    attr.wclass = GDK_INPUT_ONLY;
+    attr.width = 40;
+    attr.height = 40;
+    attr.window_type = GDK_WINDOW_TOPLEVEL;
+    gint attributes_mask = GDK_WA_X | GDK_WA_Y | GDK_WA_VISUAL | GDK_WA_COLORMAP;
+    priv->event_window = gdk_window_new(NULL, &attr, attributes_mask);
+    // TODO How the hell do I assign a callback to receive notifications of the events on the window
+    //register Key-press listening on the menu widget as the slider does not allow this.
+    // This line seg faults. Can't cast self to widget _ why not - is it not inheriting from image which should inherit from widget ?
+    //g_signal_connect(self, "scroll-event", G_CALLBACK(scroll_event_title_cb), NULL);         
+
 	return;
 }
 
 static void indicator_status_image_dispose (GObject *object)
 {
+    IndicatorStatusImagePrivate *priv = INDICATOR_STATUS_IMAGE_GET_PRIVATE(object);
+    gdk_window_destroy(priv->event_window);
 	G_OBJECT_CLASS (indicator_status_image_parent_class)->dispose (object);
+    
 	return;
 }
 
-static void
-indicator_status_image_finalize (GObject *object)
+static void indicator_status_image_finalize (GObject *object)
 {
 	G_OBJECT_CLASS (indicator_status_image_parent_class)->finalize (object);
 }
@@ -79,7 +94,6 @@ IndicatorStatusImage* indicator_status_image_new(gchar* image_name)
 {
 	//speaker_image = GTK_IMAGE(gtk_image_new_from_icon_name(current_name, GTK_ICON_SIZE_MENU));
     g_debug("about to set the image from name");
-
 	IndicatorStatusImage *self = g_object_new(INDICATOR_STATUS_IMAGE_TYPE, NULL);
     g_debug("about to set the image from name");
     gtk_image_set_from_icon_name(GTK_IMAGE(self), image_name, GTK_ICON_SIZE_MENU);

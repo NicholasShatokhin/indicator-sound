@@ -28,6 +28,7 @@ with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 typedef struct _SliderMenuItemPrivate SliderMenuItemPrivate;
 
+// TODO this is not used !!
 struct _SliderMenuItemPrivate
 {
 	gdouble slider_value;

@@ -328,8 +328,6 @@ get_icon (IndicatorObject * io)
 	speaker_image = GTK_IMAGE(status_image);
 
     //GTK_IMAGE(gtk_image_new_from_icon_name(current_name, GTK_ICON_SIZE_MENU));
-    //register Key-press listening on the menu widget as the slider does not allow this.
-    //g_signal_connect(speaker_image, "scroll-event", G_CALLBACK(scroll_event_title_cb), NULL);         
     g_debug("have a speaker image");
 	gtk_widget_show(GTK_WIDGET(speaker_image));
 
