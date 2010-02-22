@@ -42,6 +42,7 @@ struct _IndicatorStatusImageClass {
 
 struct _IndicatorStatusImage {
 	GtkImage parent;
+    GdkWindow *GSEAL (event_window);
 };
 
 GType indicator_status_image_get_type (void);
